@@ -1,6 +1,6 @@
 # NCBI MagicBLAST docker image
 
-[NCBI MagicBLAST][1] command line application in a Docker image.
+[NCBI Magic-BLAST][1] command line application in a Docker image.
 
 # Usage instructions
 
@@ -36,6 +36,6 @@ The above command will align the reads in https://www.ncbi.nlm.nih.gov/sra/DRR13
     
 Please note that this docker image contains only the magicblast executable.  The blast-workbench container (see https://github.com/ncbi/docker/blob/master/blast-workbench/README.md) hosts magicblast as well as utilities to update databases, fetch lists of taxids or make BLAST databases.  
 
-The magicBLAST documentaton is at https://ncbi.github.io/magicblast/
+The Magic-BLAST documentaton is at https://ncbi.github.io/magicblast/
 
 [1]: https://www.ncbi.nlm.nih.gov/pubmed/31345161
