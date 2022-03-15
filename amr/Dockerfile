@@ -1,61 +1,33 @@
-FROM centos:7 as amrbuild
+FROM ubuntu:latest
+
+MAINTAINER aprasad@ncbi.nlm.nih.gov
 
 ARG VERSION
 
 USER root
 
-RUN yum -y groupinstall 'Development Tools'
-RUN yum -y install wget 
+# basic setup
+RUN apt-get update && apt-get install -y hmmer ncbi-blast+ git libcurl4-openssl-dev build-essential
 
-# build blast
-WORKDIR /root/
-RUN wget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/LATEST/ncbi-blast-2.7.1+-src.tar.gz
-RUN tar xvf ncbi-blast-2.7.1+-src.tar.gz
-WORKDIR /root/ncbi-blast-2.7.1+-src/c++
-RUN ./configure --with-optimization --with-dll --with-experimental=Int8GI --with-flat-makefile --prefix=/blast
-WORKDIR /root/ncbi-blast-2.7.1+-src/c++/ReleaseMT/build
-RUN make -j -f Makefile.flat blastdb_aliastool.exe blastdbcheck.exe blastdbcmd.exe blast_formatter.exe blastn.exe blastp.exe blastx.exe convert2blastmask.exe deltablast.exe dustmasker.exe makeblastdb.exe makembindex.exe makeprofiledb.exe psiblast.exe rpsblast.exe rpstblastn.exe segmasker.exe tblastn.exe tblastx.exe windowmasker.exe
+ARG SOFTWARE_VERSION
 
-# build hmmer
-WORKDIR /root/
-RUN wget http://eddylab.org/software/hmmer3/3.1b2/hmmer-3.1b2.tar.gz
-RUN tar xvf hmmer-3.1b2.tar.gz
-WORKDIR /root/hmmer-3.1b2
-RUN ./configure --enable-portable-binary --prefix=/hmmer && make && make install
-WORKDIR easel
-RUN make install
+# Install AMRFinderPlus
+RUN git clone https://github.com/ncbi/amr.git \
+        && cd amr \
+        && make \
+        && make install \
+        && cd .. \
+        && rm -rf amr 
 
-# build amr_report
-WORKDIR /root/
-COPY src src
-WORKDIR src
-RUN make clean && make
+ARG DB_VERSION
 
-FROM centos:7
+RUN amrfinder -u
 
-COPY VERSION .
+WORKDIR /data
 
-USER root
-WORKDIR /root
+# Example commands: 
+# docker run --rm -v ${PWD}:/data ncbi/amr \
+#     amrfinder -p test_prot.fa --threads 8
 
-RUN yum -y install libgomp
-
-# install blast
-RUN mkdir -p /blast/bin /blast/lib
-COPY --from=amrbuild /root/ncbi-blast-2.7.1+-src/c++/ReleaseMT/bin /blast/bin
-COPY --from=amrbuild /root/ncbi-blast-2.7.1+-src/c++/ReleaseMT/lib /blast/lib
-WORKDIR /blast/blastdb
-ENV BLASTDB /blast/blastdb
-ENV PATH="/blast/bin:${PATH}"
-
-# install hmmer
-COPY --from=amrbuild /hmmer/bin /hmmer/bin
-WORKDIR /hmmer/hmmerdb
-ENV HMMERDB=/hmmer/hmmerdb
-ENV PATH="/hmmer/bin:${PATH}"
-
-# install amr_report
-COPY --from=amrbuild /root/src/amr_report /root/src/fasta_check /root/src/gff_check /usr/bin/
-
-CMD ["/bin/bash"]
-
+# docker run --rm -v ${PWD}:/data ncbi/amr \
+#    'amrfinder -u && amrfinder -p test_prot.fa --threads 8'
